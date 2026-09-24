@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: edossier-postgres
+    environment:
+      POSTGRES_USER: edossier
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: edossier
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-vector-db.sql:/docker-entrypoint-initdb.d/init-vector-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: edossier-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  llm-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edossier-llm-agent
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://edossier:secret@postgres:5432/edossier
+      - REDIS_URL=redis://redis:6379/0
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL}
+      - OPENAI_MODEL=meta-llama/llama-3.3-70b-instruct
+      - OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+      - GO_BACKEND_URL=http://host.docker.internal:34005
+      - ML_RECOMMENDER_URL=http://host.docker.internal:9001
+      - JWT_SECRET=${JWT_SECRET}
+      - ENVIRONMENT=development
+      - LOG_LEVEL=INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./documents:/app/documents:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
