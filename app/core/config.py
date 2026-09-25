@@ -12,15 +12,15 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
     API_WORKERS: int = 1
     
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/edossier")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+asyncpg://edossier:secret@localhost:5433/edossier")
     DB_ECHO: bool = False
     
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6380/0")
     
     # OpenRouter (OpenAI-compatible API)
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "meta-llama/llama-3.2-3b-instruct:free")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "meta-llama/llama-3.3-70b-instruct")
     OPENAI_EMBEDDING_MODEL: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
     OPENAI_TEMPERATURE: float = 0.1
     OPENAI_MAX_TOKENS: int = 4000

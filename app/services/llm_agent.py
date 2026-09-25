@@ -172,6 +172,22 @@ When users ask about how to do something, consult the knowledge base first."""
                 }
             except Exception as e:
                 logger.error(f"Agent execution error: {e}")
+                err_str = str(e)
+                if "Filter by Tool Compatibility" in err_str or "No endpoints found that support tool use" in err_str:
+                    logger.warning("Model does not support tools or no tool endpoints available. Falling back to non-tool LLM execution...")
+                    try:
+                        response = await self.llm.ainvoke([
+                            SystemMessage(content=self.system_prompt),
+                            HumanMessage(content=full_input),
+                        ])
+                        return {
+                            "message": response.content,
+                            "tool_calls": None,
+                            "tool_results": None,
+                            "sources": sources if sources else None,
+                        }
+                    except Exception as fallback_err:
+                        logger.error(f"Fallback execution error: {fallback_err}")
                 return {
                     "message": f"I encountered an error while processing your request: {str(e)}",
                     "tool_calls": None,
@@ -237,6 +253,21 @@ When users ask about how to do something, consult the knowledge base first."""
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
             except Exception as e:
                 logger.error(f"Streaming agent error: {e}")
+                err_str = str(e)
+                if "Filter by Tool Compatibility" in err_str or "No endpoints found that support tool use" in err_str:
+                    logger.warning("Model does not support tools or no tool endpoints available. Streaming non-tool response...")
+                    try:
+                        async for chunk in self.llm.astream([
+                            SystemMessage(content=self.system_prompt),
+                            HumanMessage(content=full_input),
+                        ]):
+                            if chunk.content:
+                                yield f"data: {json.dumps({'type': 'content', 'content': chunk.content})}\n\n"
+                        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                        return
+                    except Exception as fallback_err:
+                        yield f"data: {json.dumps({'type': 'error', 'error': str(fallback_err)})}\n\n"
+                        return
                 yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
         else:
             try:
